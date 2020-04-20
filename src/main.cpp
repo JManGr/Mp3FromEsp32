@@ -14,11 +14,13 @@ AudioFileSourceSD *source = NULL;
 //AudioOutputI2SNoDAC *out;
 AudioOutputI2S *out;
 AudioFileSourceID3 *id3;
-File dir;
+File dir ;
+File tdir ;
+bool StopPlay=false;
 
 // You may need a fast SD card. Set this as high as it will work (40MHz max).
 #define SPI_SPEED SD_SCK_MHZ(40)
-
+int32_t playNumber = 0;
 bool tryToPlayNextFile()
 {
   File file = dir.openNextFile();
@@ -26,13 +28,15 @@ bool tryToPlayNextFile()
   {
     if (String(file.name()).endsWith(".mp3"))
     {
+      playNumber++;
       if (source->isOpen())
       {
         source->close();
       }
       if (source->open(file.name()))
       {
-        Serial.printf_P(PSTR("Playing '%s' from SD card...\n"), file.name());
+
+        Serial.printf_P(PSTR("Playing (%d) '%s' from SD card...\n"), playNumber, file.name());
         mp3->begin(source, out);
       }
       else
@@ -44,6 +48,58 @@ bool tryToPlayNextFile()
   }
   return false;
 }
+void playNextSong()
+{
+  mp3->stop();
+}
+
+void playPreviousSong(void *p)
+{
+  int32_t sn = playNumber - 2;
+  if (sn < 0)
+  {
+    sn = 0;
+  }
+  tdir = SD.open("/");
+  playNumber = 0;
+  while (playNumber < sn)
+  {
+    File f = tdir.openNextFile();
+    if (f)
+    {
+      if (String(f.name()).endsWith(".mp3"))
+      {
+        playNumber++;
+        Serial.printf_P(PSTR("Searching (%d) '%s'\n"), playNumber, f.name());
+      }
+      f.close();
+    }
+  }
+  
+  dir = tdir;
+ // mp3->stop();
+  StopPlay=true;
+  vTaskDelete(NULL);
+}
+
+void listSongs(void *p)
+{
+  tdir = SD.open("/");
+  File f = tdir.openNextFile();
+  int32_t i = 0;
+  while (f)
+  {
+    if (String(f.name()).endsWith(".mp3"))
+    {
+      i++;
+      Serial.printf_P(PSTR("(%d) '%s'\n"), i, f.name());
+    }
+    f.close();
+    f = tdir.openNextFile();
+    vTaskDelay(200 / portTICK_PERIOD_MS);
+  }
+  vTaskDelete(NULL);
+}
 
 void runSerialCommand(char c)
 {
@@ -51,9 +107,16 @@ void runSerialCommand(char c)
   {
   case 'n':
   case 'N':
-    mp3->stop();
+    playNextSong();
     break;
-
+  case 'p':
+  case 'P':    
+    xTaskCreate(playPreviousSong, "playPreviousSong", 1024 * 10, NULL, 0, NULL);
+    break;
+  case 'l':
+  case 'L':
+    xTaskCreate(listSongs, "listSongs", 1024 * 10, NULL, 0, NULL);
+    break;
   default:
     break;
   }
@@ -100,8 +163,6 @@ void setup()
   mp3 = new AudioGeneratorMP3();
   //mp3->begin(file, out);
   dir = SD.open("/");
-  if (dir.isDirectory())
-    audioLogger->printf("is Dir 1\n");
 }
 
 void loop()
@@ -115,18 +176,14 @@ void loop()
   }
   if (mp3->isRunning())
   {
-
-    if (!mp3->loop())
+    if (StopPlay||!mp3->loop())
     {
+      StopPlay=false;
       mp3->stop();
     }
   }
   else
   {
-
-    // audioLogger->printf("MP3 done\n");
-    // delay(1000);
-    File file = dir.openNextFile();
     if (!tryToPlayNextFile())
     {
       Serial.println(F("Playback form SD card done\n"));
