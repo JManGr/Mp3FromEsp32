@@ -3,6 +3,8 @@
 #include <HTTPClient.h>
 #include <SD.h>
 #include <FS.h>
+#include <dirent.h>
+
 #include "AudioFileSourceSD.h"
 #include "AudioFileSourceID3.h"
 //#include "AudioFileSourceSPIFFS.h"
@@ -14,17 +16,39 @@ AudioFileSourceSD *source = NULL;
 //AudioOutputI2SNoDAC *out;
 AudioOutputI2S *out;
 AudioFileSourceID3 *id3;
-File dir ;
-File tdir ;
-bool StopPlay=false;
-float gain=0.5;
+//File dir;
+File tdir;
+
+DIR *theDir = NULL;
+
+bool StopPlay = false;
+float gain = 0.5;
 
 // You may need a fast SD card. Set this as high as it will work (40MHz max).
 #define SPI_SPEED SD_SCK_MHZ(40)
-int32_t playNumber = 0;
+long playNumber = 0;
+
+File openNextFile()
+{
+  struct dirent *ent;
+  if (theDir == NULL)
+  {
+    theDir = opendir("/sd/");
+  }
+  if (theDir != NULL)
+  {
+    /* print all the files and directories within directory */
+    if ((ent = readdir(theDir)) != NULL)
+    {
+      return SD.open("/" + String(ent->d_name));
+    }
+  }
+  return File();
+}
+
 bool tryToPlayNextFile()
 {
-  File file = dir.openNextFile();
+  File file = openNextFile();
   if (file)
   {
     if (String(file.name()).endsWith(".mp3"))
@@ -37,7 +61,7 @@ bool tryToPlayNextFile()
       if (source->open(file.name()))
       {
 
-        Serial.printf_P(PSTR("Playing (%d) '%s' from SD card...\n"), playNumber, file.name());
+        Serial.printf_P(PSTR("Playing (%ld) '%s' from SD card...\n"), playNumber, file.name());
         mp3->begin(source, out);
       }
       else
@@ -49,73 +73,91 @@ bool tryToPlayNextFile()
   }
   return false;
 }
+
+void doSoundLoop()
+{
+  if (mp3->isRunning())
+  {
+    if (StopPlay || !mp3->loop())
+    {
+      StopPlay = false;
+      mp3->stop();
+    }
+  }
+}
+
 void playNextSong()
 {
-  mp3->stop();
+  StopPlay = true;
 }
 
 void playPreviousSong(void *p)
 {
-  int32_t sn = playNumber - 2;
-  if (sn < 0)
+  playNumber = telldir(theDir) - 2;
+  if (playNumber < 0)
   {
-    sn = 0;
+    playNumber = 0;
   }
-  tdir = SD.open("/");
-  playNumber = 0;
-  while (playNumber < sn)
-  {
-    File f = tdir.openNextFile();
-    if (f)
-    {
-      if (String(f.name()).endsWith(".mp3"))
-      {
-        playNumber++;
-        Serial.printf_P(PSTR("Searching (%d) '%s'\n"), playNumber, f.name());
-      }
-      f.close();
-    }
-  }
-  
-  dir = tdir;
- // mp3->stop();
-  StopPlay=true;
+  seekdir(theDir, playNumber);
+  StopPlay = true;
   vTaskDelete(NULL);
 }
 
+void listOrCountSongs(bool showFilenames)
+{
+
+  int32_t i = 0;
+  DIR *dir1;
+  struct dirent *ent;
+  if ((dir1 = opendir("/sd/")) != NULL)
+  {
+    /* print all the files and directories within directory */
+    while ((ent = readdir(dir1)) != NULL)
+    {
+      if (String(ent->d_name).endsWith(".mp3"))
+      {
+        i++;
+        if (showFilenames)
+        {
+          Serial.printf("(%d) %s\n", i, ent->d_name);
+        }
+      }
+    }
+    closedir(dir1);
+  }
+  else
+  {
+    /* could not open directory */
+    Serial.printf("could not open directory\n");
+  }
+
+  Serial.printf_P(PSTR("(%d)Files found.\n"), i);
+  vTaskDelete(NULL);
+}
+
+void countSongs(void *p)
+{
+  listOrCountSongs(false);
+}
 void listSongs(void *p)
 {
-  tdir = SD.open("/");
-  File f = tdir.openNextFile();
-  int32_t i = 0;
-  while (f)
-  {
-    if (String(f.name()).endsWith(".mp3"))
-    {
-      i++;
-      Serial.printf_P(PSTR("(%d) '%s'\n"), i, f.name());
-    }
-    f.close();
-    f = tdir.openNextFile();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-  }
-  vTaskDelete(NULL);
+  listOrCountSongs(true);
 }
 
 void incGain()
 {
-  if(gain<3.9)
+  if (gain < 3.9)
   {
-    gain+=0.1;
+    gain += 0.1;
     out->SetGain(gain);
   }
 }
 
 void decGain()
 {
-if(gain>0.1)
+  if (gain > 0.1)
   {
-    gain-=0.1;
+    gain -= 0.1;
     out->SetGain(gain);
   }
 }
@@ -124,27 +166,32 @@ void runSerialCommand(char c)
 {
   switch (c)
   {
+  case 'c':
+  case 'C':
+    xTaskCreatePinnedToCore(countSongs, "countSongs", 1024 * 10, NULL, 0, NULL, 1);
+    break;
+  case 'l':
+  case 'L':
+    xTaskCreatePinnedToCore(listSongs, "listSongs", 1024 * 10, NULL, 0, NULL, 1);
+    break;
+
   case 'n':
   case 'N':
     playNextSong();
     break;
   case 'p':
-  case 'P':    
+  case 'P':
     xTaskCreate(playPreviousSong, "playPreviousSong", 1024 * 10, NULL, 0, NULL);
     break;
-  case 'l':
-  case 'L':
-    xTaskCreate(listSongs, "listSongs", 1024 * 10, NULL, 0, NULL);
-    break;
-    
+
   case '+':
     incGain();
-    Serial.printf("Gain: %.1f\n",gain);
+    Serial.printf("Gain: %.1f\n", gain);
     break;
-    
+
   case '-':
     decGain();
-    Serial.printf("Gain: %.1f\n",gain);
+    Serial.printf("Gain: %.1f\n", gain);
     break;
   default:
     break;
@@ -191,7 +238,7 @@ void setup()
   out->SetGain(gain);
   mp3 = new AudioGeneratorMP3();
   //mp3->begin(file, out);
-  dir = SD.open("/");
+  //dir = SD.open("/");
 }
 
 void loop()
@@ -203,15 +250,9 @@ void loop()
     c = Serial.read();
     runSerialCommand(c);
   }
-  if (mp3->isRunning())
-  {
-    if (StopPlay||!mp3->loop())
-    {
-      StopPlay=false;
-      mp3->stop();
-    }
-  }
-  else
+  doSoundLoop();
+
+  if (!mp3->isRunning())
   {
     if (!tryToPlayNextFile())
     {
@@ -219,4 +260,5 @@ void loop()
       delay(1000);
     }
   }
+  delay(1);
 }
