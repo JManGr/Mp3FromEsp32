@@ -17,6 +17,7 @@ AudioFileSourceID3 *id3;
 File dir ;
 File tdir ;
 bool StopPlay=false;
+float gain=0.5;
 
 // You may need a fast SD card. Set this as high as it will work (40MHz max).
 #define SPI_SPEED SD_SCK_MHZ(40)
@@ -101,6 +102,24 @@ void listSongs(void *p)
   vTaskDelete(NULL);
 }
 
+void incGain()
+{
+  if(gain<3.9)
+  {
+    gain+=0.1;
+    out->SetGain(gain);
+  }
+}
+
+void decGain()
+{
+if(gain>0.1)
+  {
+    gain-=0.1;
+    out->SetGain(gain);
+  }
+}
+
 void runSerialCommand(char c)
 {
   switch (c)
@@ -116,6 +135,16 @@ void runSerialCommand(char c)
   case 'l':
   case 'L':
     xTaskCreate(listSongs, "listSongs", 1024 * 10, NULL, 0, NULL);
+    break;
+    
+  case '+':
+    incGain();
+    Serial.printf("Gain: %.1f\n",gain);
+    break;
+    
+  case '-':
+    decGain();
+    Serial.printf("Gain: %.1f\n",gain);
     break;
   default:
     break;
@@ -159,7 +188,7 @@ void setup()
   //id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
   //out = new AudioOutputI2SNoDAC();
   out = new AudioOutputI2S(0, 2, 8, 0);
-  out->SetGain(0.5);
+  out->SetGain(gain);
   mp3 = new AudioGeneratorMP3();
   //mp3->begin(file, out);
   dir = SD.open("/");
