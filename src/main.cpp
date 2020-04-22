@@ -2,7 +2,7 @@
 #include <SPIFFS.h>
 #include <HTTPClient.h>
 // #include <SD.h>
-// #include <FS.h>
+#include "AudioDefinitions.hr"
 #include "navigation.h"
 
 #define SPI_SPEED SD_SCK_MHZ(40)

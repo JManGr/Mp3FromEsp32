@@ -2,13 +2,11 @@
 #include <dirent.h>
 #include <SD.h>
 #include <FS.h>
+#include"AudioDefinitions.h"
 #include "navigation.h"
 
 
-AudioGeneratorMP3 *mp3;
-AudioFileSourceSD *source = NULL;
-AudioOutputI2S *out;
-AudioFileSourceID3 *id3;
+
 bool StopPlay = false;
 long playNumber = 0;
 uint8_t playMode = PLAYMODE_DEFAULT;
