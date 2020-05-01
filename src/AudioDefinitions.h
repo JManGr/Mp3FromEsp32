@@ -4,7 +4,8 @@
 #include "AudioFileSourceSD.h"
 #include "AudioFileSourceID3.h"
 #include "AudioGeneratorMP3.h"
-#include "AudioOutputI2SNoDAC.h"
+//#include "AudioOutputI2SNoDAC.h"
+#include "AudioOutputI2S.h"
 
 extern AudioGeneratorMP3 *mp3;
 extern AudioFileSourceSD *source;
