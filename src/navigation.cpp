@@ -174,7 +174,7 @@ void navigationSetup(HardwareSerial serial)
   if (!SD.begin())
     audioLogger->println("Error SD");
   source = new AudioFileSourceSD();
-  out = new AudioOutputI2S(0, 2, 8, 0);
+  out = new AudioOutputI2S();
   out->SetGain(gain);
   mp3 = new AudioGeneratorMP3();
 }
