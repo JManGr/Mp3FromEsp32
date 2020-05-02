@@ -41,7 +41,7 @@ void runSerialCommand(char c)
   case 'r':
   case 'R':
     toggleRandomPlay();
-    Serial.printf("Random Pay is %s.\n", (playMode == PLAYMODE_RMD ? "On" : "Off"));
+    Serial.printf("Random Pay is %s.\n", (getPlayMode() == PLAYMODE_RND ? "On" : "Off"));
     break;
 
   case '+':

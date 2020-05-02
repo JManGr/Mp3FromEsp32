@@ -16,8 +16,7 @@ int clockCenterY = ((screenH - 16) / 2) + 16; // top yellow part is 16 px height
 int frameCount = 1;
 
 int overlaysCount = 1;
-
-//char lines[3][64];
+String modeIndicator="M R";
 String lines[3];
 void setLines(char *l1, char *l2, char *l3)
 {
@@ -65,12 +64,29 @@ void longTextFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, i
     display->setTextAlignment(TEXT_ALIGN_LEFT);
     display->setFont(ArialMT_Plain_10);
     int lw = 14;
-    int ln = 1;
+    int ln = 0;
     y = 2;
-    display->drawString(10, ln * lw + y, lines[0]);
+     display->drawString(10, ln * lw, modeIndicator);
+    display->drawString(10, ++ln * lw + y, lines[0]);
     display->drawString(10, ++ln * lw + y, lines[1]);
 }
 
+
+void setModeIndicator(eModeindicators mi, bool enable)
+{
+    switch (mi)
+    {
+    case eModeindicators::Mute:
+        modeIndicator[0]=enable?'M':' ';
+        break;
+    case eModeindicators::RND:
+        modeIndicator[2]=enable?'R':' ';
+        break;
+    
+    default:
+        break;
+    }
+}
 // This array keeps function pointers to all frames
 // frames are the single views that slide in
 FrameCallback frames[] = {longTextFrame, helloFrame};
@@ -81,8 +97,8 @@ OverlayCallback overlays[] = {clockOverlay};
 void doDisplayUpdate(void *p)
 {
     Serial.println("doDisplayUpdate running...");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    ui.switchToFrame(1);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    ui.switchToFrame(0);
     int remainingTimeBudget;
     while (true)
     {

@@ -44,7 +44,7 @@ void doSoundLoop(void *p)
 
 File openNextFile()
 {
-  if (playMode == PLAYMODE_RMD)
+  if (playMode == PLAYMODE_RND)
   {
     randomPlay();
   }
@@ -109,6 +109,29 @@ bool tryToPlayNextFile()
   }
   return false;
 }
+
+uint8_t getPlayMode()
+{
+  return playMode;
+}
+
+void setPlayMode(uint8_t value)
+{
+  playMode=value;
+  setModeIndicator(eModeindicators::RND,playMode== PLAYMODE_RND);
+}
+
+bool getIsMute()
+{
+  return isMute;
+}
+
+void setIsMute(bool value)
+{
+  isMute=value;
+  setModeIndicator(eModeindicators::Mute,isMute);
+}
+
 void playNextSong()
 {
   StopPlay = true;
@@ -116,12 +139,12 @@ void playNextSong()
 
 void toggleRandomPlay()
 {
-  if (playMode == PLAYMODE_RMD)
+  if (playMode == PLAYMODE_RND)
   {
-    playMode = PLAYMODE_DEFAULT;
+    setPlayMode(PLAYMODE_DEFAULT);
     return;
   }
-  playMode = PLAYMODE_RMD;
+  setPlayMode(PLAYMODE_RND);
   StopPlay = true;
 }
 
@@ -209,7 +232,7 @@ void decGain()
 
 bool toggleMute()
 {
-  isMute= !isMute;
+  setIsMute(!isMute);
   return isMute;
 }
 
@@ -217,7 +240,8 @@ bool toggleMute()
 
 void navigationSetup(HardwareSerial serial)
 {
-  isMute=false;
+  setPlayMode(PLAYMODE_DEFAULT);
+  setIsMute(false);
   randomSeed(analogRead(0));
   audioLogger = &Serial;
   if (!SD.begin())
