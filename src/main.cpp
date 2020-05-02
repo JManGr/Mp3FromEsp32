@@ -5,6 +5,7 @@
 #include "AudioDefinitions.h"
 #include "navigation.h"
 #include "ToutchKey.h"
+#include "Display.h"
 
 #define SPI_SPEED SD_SCK_MHZ(40)
 
@@ -38,7 +39,13 @@ void runSerialCommand(char c)
   case 'L':
     xTaskCreatePinnedToCore(listSongs, "listSongs", 1024 * 10, NULL, 0, NULL, 1);
     break;
-
+  case 'm':
+  case 'M':
+    {
+      bool b = mp3->toggleMute();
+    Serial.printf("Mute is %s.\n", (b ? "on" : "off"));
+    }
+    break;
   case 'n':
   case 'N':
     playNextSong();
@@ -90,8 +97,6 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
   Serial.flush();
 }
 
-
-
 void setup()
 {
   Serial.begin(115200);
@@ -99,6 +104,7 @@ void setup()
   navigationSetup(Serial);
   runSerialCommand('c');
   setupTouch(runSerialCommand);
+  setupDisplay();
   xTaskCreate(&doSoundLoop, "doSoundLoop", 1024 * 5, NULL, 1, NULL);
 }
 

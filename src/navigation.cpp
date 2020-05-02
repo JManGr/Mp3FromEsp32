@@ -2,10 +2,9 @@
 #include <dirent.h>
 #include <SD.h>
 #include <FS.h>
-#include"AudioDefinitions.h"
+#include "AudioDefinitions.h"
 #include "navigation.h"
-
-
+#include "Display.h"
 
 bool StopPlay = false;
 long playNumber = 0;
@@ -16,9 +15,6 @@ volatile uint32_t soundsInDir = 0;
 File tdir;
 
 DIR *theDir = NULL;
-
-
-
 
 File openNextFile()
 {
@@ -55,8 +51,27 @@ bool tryToPlayNextFile()
       }
       if (source->open(file.name()))
       {
+        char* name=(char*)(file.name());
+        // audioLogger->printf_P(PSTR("Playing (%ld) '%s' from SD card...\n"), playNumber, name);
+         auto ptr = strtok(name, "-");
+         char* l1 = NULL;
+         char* l2 = NULL;
+         char* l3 = NULL;
+         if (ptr != NULL)
+         {
+           l1 = ptr;
+           ptr = strtok(NULL, "-.");
+           if (ptr != NULL)
+           {
+             l2 = ptr;
+           }
+         }
+        else
+        {
+          l1 = name;
+        }
+        setLines(l1,l2,l3);
 
-        audioLogger->printf_P(PSTR("Playing (%ld) '%s' from SD card...\n"), playNumber, file.name());
         mp3->begin(source, out);
       }
       else
@@ -87,7 +102,7 @@ void toggelRandomPlay()
 void randomPlay()
 {
   playNumber = random(soundsInDir);
-  audioLogger->printf("In randomPlay: play %ld/%d\n",playNumber,soundsInDir);
+  audioLogger->printf("In randomPlay: play %ld/%d\n", playNumber, soundsInDir);
   if (playNumber < 0)
   {
     playNumber = 0;
@@ -166,7 +181,6 @@ void decGain()
   }
 }
 
-
 void navigationSetup(HardwareSerial serial)
 {
   randomSeed(analogRead(0));
@@ -174,7 +188,7 @@ void navigationSetup(HardwareSerial serial)
   if (!SD.begin())
     audioLogger->println("Error SD");
   source = new AudioFileSourceSD();
-  out = new AudioOutputI2S();
+  out = new AudioOutputI2S(0, AudioOutputI2S::EXTERNAL_I2S, 8, AudioOutputI2S::APLL_AUTO);
   out->SetGain(gain);
   mp3 = new AudioGeneratorMP3();
 }
