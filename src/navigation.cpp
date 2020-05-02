@@ -6,6 +6,7 @@
 #include "navigation.h"
 #include "Display.h"
 
+bool isMute;
 bool StopPlay = false;
 long playNumber = 0;
 uint8_t playMode = PLAYMODE_DEFAULT;
@@ -15,6 +16,31 @@ volatile uint32_t soundsInDir = 0;
 File tdir;
 
 DIR *theDir = NULL;
+
+
+void doSoundLoop(void *p)
+{
+  while (true)
+  {
+    if (mp3->isRunning())
+    {
+      if (isMute)
+      {
+        out->stop();
+      }
+      else
+      {
+        if (StopPlay || !mp3->loop())
+        {
+          StopPlay = false;
+          mp3->stop();
+        }
+      }
+    }
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+  }
+}
+
 
 File openNextFile()
 {
@@ -88,7 +114,7 @@ void playNextSong()
   StopPlay = true;
 }
 
-void toggelRandomPlay()
+void toggleRandomPlay()
 {
   if (playMode == PLAYMODE_RMD)
   {
@@ -181,8 +207,17 @@ void decGain()
   }
 }
 
+bool toggleMute()
+{
+  isMute= !isMute;
+  return isMute;
+}
+
+
+
 void navigationSetup(HardwareSerial serial)
 {
+  isMute=false;
   randomSeed(analogRead(0));
   audioLogger = &Serial;
   if (!SD.begin())
@@ -190,5 +225,6 @@ void navigationSetup(HardwareSerial serial)
   source = new AudioFileSourceSD();
   out = new AudioOutputI2S(0, AudioOutputI2S::EXTERNAL_I2S, 8, AudioOutputI2S::APLL_AUTO);
   out->SetGain(gain);
+  
   mp3 = new AudioGeneratorMP3();
 }

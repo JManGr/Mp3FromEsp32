@@ -11,21 +11,6 @@
 
 typedef void (*RunCommand_t)(char c);
 
-void doSoundLoop(void *p)
-{
-  while (true)
-  {
-    if (mp3->isRunning())
-    {
-      if (StopPlay || !mp3->loop())
-      {
-        StopPlay = false;
-        mp3->stop();
-      }
-    }
-    vTaskDelay(2 / portTICK_PERIOD_MS);
-  }
-}
 
 void runSerialCommand(char c)
 {
@@ -41,11 +26,10 @@ void runSerialCommand(char c)
     break;
   case 'm':
   case 'M':
-    {
-      bool b = mp3->toggleMute();
-    Serial.printf("Mute is %s.\n", (b ? "on" : "off"));
-    }
-    break;
+  {
+    Serial.printf("Mute is %s.\n", (toggleMute() ? "on" : "off"));
+  }
+  break;
   case 'n':
   case 'N':
     playNextSong();
@@ -56,7 +40,7 @@ void runSerialCommand(char c)
     break;
   case 'r':
   case 'R':
-    toggelRandomPlay();
+    toggleRandomPlay();
     Serial.printf("Random Pay is %s.\n", (playMode == PLAYMODE_RMD ? "On" : "Off"));
     break;
 
