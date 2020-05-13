@@ -11,6 +11,7 @@
 
 typedef void (*RunCommand_t)(char c);
 
+extern void setupOTA();
 
 void runSerialCommand(char c)
 {
@@ -85,11 +86,16 @@ void setup()
 {
   Serial.begin(115200);
   delay(1000);
+
   navigationSetup(Serial);
   runSerialCommand('c');
   setupTouch(runSerialCommand);
-  setupDisplay();
+
   xTaskCreate(&doSoundLoop, "doSoundLoop", 1024 * 5, NULL, 1, NULL);
+  setupDisplay();
+  setModeIndicator(eModeindicators::Mute, false);
+  setModeIndicator(eModeindicators::RND, false);
+  setupOTA();
 }
 
 void loop()

@@ -151,7 +151,7 @@ void toggleRandomPlay()
 void randomPlay()
 {
   playNumber = random(soundsInDir);
-  audioLogger->printf("In randomPlay: play %ld/%d\n", playNumber, soundsInDir);
+  audioLogger->printf("Play %ld/%d\n", playNumber, soundsInDir);
   if (playNumber < 0)
   {
     playNumber = 0;
@@ -240,8 +240,8 @@ bool toggleMute()
 
 void navigationSetup(HardwareSerial serial)
 {
-  setPlayMode(PLAYMODE_DEFAULT);
-  setIsMute(false);
+  //setPlayMode(PLAYMODE_DEFAULT);
+  //setIsMute(false);
   randomSeed(analogRead(0));
   audioLogger = &Serial;
   if (!SD.begin())

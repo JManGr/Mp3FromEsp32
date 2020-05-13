@@ -16,7 +16,7 @@ int clockCenterY = ((screenH - 16) / 2) + 16; // top yellow part is 16 px height
 int frameCount = 1;
 
 int overlaysCount = 1;
-String modeIndicator="M R";
+String modeIndicator = "* *";
 String lines[3];
 void setLines(char *l1, char *l2, char *l3)
 {
@@ -43,8 +43,10 @@ void setLines(char *l1, char *l2, char *l3)
         lines[2] = String(buf);
         lines[2].trim();
     }
+    Serial.println(modeIndicator);
     Serial.println(lines[0]);
     Serial.println(lines[1]);
+    ui.update(true);
 }
 
 void clockOverlay(OLEDDisplay *display, OLEDDisplayUiState *state)
@@ -60,29 +62,36 @@ void helloFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
 
 void longTextFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
 {
-    display->clear();
+    if (display == NULL)
+    {
+        Serial.printf("Display=NULL FrameState=%d\n", state->frameState);
+        return;
+    }
+
     display->setTextAlignment(TEXT_ALIGN_LEFT);
     display->setFont(ArialMT_Plain_10);
     int lw = 14;
     int ln = 0;
     y = 2;
-     display->drawString(10, ln * lw, modeIndicator);
+    //Serial.println(state->frameState);
+    display->drawString(10, ln * lw + 1, modeIndicator);
     display->drawString(10, ++ln * lw + y, lines[0]);
     display->drawString(10, ++ln * lw + y, lines[1]);
 }
-
 
 void setModeIndicator(eModeindicators mi, bool enable)
 {
     switch (mi)
     {
     case eModeindicators::Mute:
-        modeIndicator[0]=enable?'M':' ';
+        modeIndicator[0] = enable ? 'M' : ' ';
+        ui.update(true);
         break;
     case eModeindicators::RND:
-        modeIndicator[2]=enable?'R':' ';
+        modeIndicator[2] = enable ? 'R' : ' ';
+        //ui.update(true);
         break;
-    
+
     default:
         break;
     }
@@ -99,13 +108,14 @@ void doDisplayUpdate(void *p)
     Serial.println("doDisplayUpdate running...");
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ui.switchToFrame(0);
-    int remainingTimeBudget;
+    int remainingTimeBudget = 50;
     while (true)
     {
-        if ((remainingTimeBudget = ui.update()) > 0)
+
         {
-            vTaskDelay(remainingTimeBudget / portTICK_PERIOD_MS);
+            //ui.update();
         }
+        vTaskDelay(remainingTimeBudget / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
@@ -115,7 +125,7 @@ void setupDisplay()
     // The ESP is capable of rendering 60fps in 80Mhz mode
     // but that won't give you much time for anything else
     // run it in 160Mhz mode or just set it to 30 fps
-    ui.setTargetFPS(10);
+    ui.setTargetFPS(1);
 
     // Customize the active and inactive symbol
     //ui.setActiveSymbol(activeSymbol);
@@ -123,16 +133,16 @@ void setupDisplay()
 
     // You can change this to
     // TOP, LEFT, BOTTOM, RIGHT
-    ui.setIndicatorPosition(TOP);
+    //ui.setIndicatorPosition(TOP);
 
     // Defines where the first frame is located in the bar.
-    ui.setIndicatorDirection(LEFT_RIGHT);
+    //ui.setIndicatorDirection(LEFT_RIGHT);
 
     //ui.disableAllIndicators();
 
     // You can change the transition that is used
     // SLIDE_LEFT, SLIDE_RIGHT, SLIDE_UP, SLIDE_DOWN
-    ui.setFrameAnimation(SLIDE_LEFT);
+    //ui.setFrameAnimation(SLIDE_LEFT);
 
     // Add frames
     ui.setFrames(frames, frameCount);
@@ -141,9 +151,13 @@ void setupDisplay()
     ui.setOverlays(overlays, overlaysCount);
 
     ui.disableAutoTransition();
+    ui.disableAllIndicators();
 
+    lines[0] = String("------");
+    lines[1] = String("------");
+    lines[2] = String("------");
     // Initialising the UI will init the display too.
     ui.init();
 
-    xTaskCreate(&doDisplayUpdate, "doDisplayUpdate", 1024 * 5, NULL, 1, NULL);
+    //xTaskCreate(&doDisplayUpdate, "doDisplayUpdate", 1024 * 5, NULL, 1, NULL);
 }

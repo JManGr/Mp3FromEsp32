@@ -37,7 +37,7 @@ static void read_Key_task(void *pvParameter)
       }
       if (tasten[i].lastValue > 1000 && touch_filter_value < 1000)
       {
-        printf("id:%i, old %i, new %i\n", tasten[i].number_TP, tasten[i].lastValue, touch_filter_value);
+        //printf("id:%i, old %i, new %i\n", tasten[i].number_TP, tasten[i].lastValue, touch_filter_value);
         tasten[i].cmd(*((char *)tasten[i].pram));
       }
       tasten[i].lastValue = touch_filter_value;
